@@ -57,22 +57,29 @@ namespace EasyEraser
         {
             Debug.Print("擦除文件：{0}", TargetFile);
             if (!File.Exists(TargetFile)) return;
-            using (FileStream EraseStream = new FileStream(TargetFile,FileMode.Open)) 
+            try
             {
-                //用 00 擦除
-                EraseFileByTargetValue(EraseStream);
-                //用 FF 擦除
-                EraseFileByTargetValue(EraseStream, 0xFF);
-                //随机擦除
-                EraseFileByRandomValue(EraseStream);
-                //随机擦除
-                EraseFileByRandomValue(EraseStream);
-                //随机擦除
-                EraseFileByRandomValue(EraseStream);
-                //用 FF 擦除
-                EraseFileByTargetValue(EraseStream);
-                
-                Debug.Print("文件长度：{0} ,\t流对象哈希值：{1}", EraseStream.Length, EraseStream.GetHashCode());
+                using (FileStream EraseStream = new FileStream(TargetFile, FileMode.Open))
+                {
+                    //用 00 擦除
+                    EraseFileByTargetValue(EraseStream);
+                    //用 FF 擦除
+                    EraseFileByTargetValue(EraseStream, 0xFF);
+                    //随机擦除
+                    EraseFileByRandomValue(EraseStream);
+                    //随机擦除
+                    EraseFileByRandomValue(EraseStream);
+                    //随机擦除
+                    EraseFileByRandomValue(EraseStream);
+                    //用 FF 擦除
+                    EraseFileByTargetValue(EraseStream);
+
+                    Debug.Print("文件长度：{0} ,\t流对象哈希值：{1}", EraseStream.Length, EraseStream.GetHashCode());
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Print($"擦除文件 {TargetFile} 遇到异常：{ex.Message}");
             }
             Debug.Print("————————————————");
         }
@@ -84,25 +91,32 @@ namespace EasyEraser
         /// <param name="EraseValue">填充文件值</param>
         private void EraseFileByTargetValue(FileStream EraseStream, byte EraseValue = 0)
         {
-            //检查流可用
-            if (EraseStream == null) throw new Exception("空的擦除流对象...");
-            if (!EraseStream.CanSeek) throw new Exception("不可定位的擦除流对象...");
-            if (!EraseStream.CanWrite) throw new Exception("不可写入的擦除流对象...");
-            //擦除缓冲
-            byte[] EraseBuffer = new byte[512];
-            //使用特定值填充缓冲区
-            for (int Index = 0; Index < 512; Index++)
-                EraseBuffer[Index] = EraseValue;
-            //重定位擦除文件流
-            EraseStream.Seek(0, SeekOrigin.Begin);
-            //填充擦除缓冲到流
-            while (EraseStream.Position< EraseStream.Length)
+            try
             {
-                EraseStream.Write(EraseBuffer, 0, 512);
+                //检查流可用
+                if (EraseStream == null) throw new Exception("空的擦除流对象...");
+                if (!EraseStream.CanSeek) throw new Exception("不可定位的擦除流对象...");
+                if (!EraseStream.CanWrite) throw new Exception("不可写入的擦除流对象...");
+                //擦除缓冲
+                byte[] EraseBuffer = new byte[512];
+                //使用特定值填充缓冲区
+                for (int Index = 0; Index < 512; Index++)
+                    EraseBuffer[Index] = EraseValue;
+                //重定位擦除文件流
+                EraseStream.Seek(0, SeekOrigin.Begin);
+                //填充擦除缓冲到流
+                while (EraseStream.Position < EraseStream.Length)
+                {
+                    EraseStream.Write(EraseBuffer, 0, 512);
+                }
+                //应用缓冲
+                EraseStream.Flush();
+                Debug.Print($"使用 0x{EraseValue.ToString("X").PadRight(2)} 擦除文件 {EraseStream.Name} 完毕！");
             }
-            //应用缓冲
-            EraseStream.Flush();
-            Debug.Print($"使用 0x{EraseValue.ToString("X").PadRight(2)} 擦除文件 {EraseStream.Name} 完毕！");
+            catch (Exception ex)
+            {
+                Debug.Print($"使用 0x{EraseValue.ToString("X").PadRight(2)} 擦除文件 {EraseStream.Name} 遇到异常：{ex.Message}");
+            }
         }
 
         /// <summary>
@@ -111,25 +125,32 @@ namespace EasyEraser
         /// <param name="EraseStream">擦除文件流</param>
         private void EraseFileByRandomValue(FileStream EraseStream)
         {
-            //检查流可用
-            if (EraseStream == null) throw new Exception("空的擦除流对象...");
-            if (!EraseStream.CanSeek) throw new Exception("不可定位的擦除流对象...");
-            if (!EraseStream.CanWrite) throw new Exception("不可写入的擦除流对象...");
-            //擦出缓冲
-            Random EraseRandom = new Random();
-            byte[] EraseBuffer = new byte[512];
-            //重定位擦除文件流
-            EraseStream.Seek(0, SeekOrigin.Begin);
-            //填充擦除缓冲到流
-            while (EraseStream.Position < EraseStream.Length)
+            try
             {
-                //使用随机值填充缓冲
-                EraseRandom.NextBytes(EraseBuffer);
-                EraseStream.Write(EraseBuffer, 0, 512);
+                //检查流可用
+                if (EraseStream == null) throw new Exception("空的擦除流对象...");
+                if (!EraseStream.CanSeek) throw new Exception("不可定位的擦除流对象...");
+                if (!EraseStream.CanWrite) throw new Exception("不可写入的擦除流对象...");
+                //擦出缓冲
+                Random EraseRandom = new Random();
+                byte[] EraseBuffer = new byte[512];
+                //重定位擦除文件流
+                EraseStream.Seek(0, SeekOrigin.Begin);
+                //填充擦除缓冲到流
+                while (EraseStream.Position < EraseStream.Length)
+                {
+                    //使用随机值填充缓冲
+                    EraseRandom.NextBytes(EraseBuffer);
+                    EraseStream.Write(EraseBuffer, 0, 512);
+                }
+                //应用缓冲
+                EraseStream.Flush();
+                Debug.Print($"使用随机值擦除文件 {EraseStream.Name} 完毕！");
             }
-            //应用缓冲
-            EraseStream.Flush();
-            Debug.Print($"使用随机值擦除文件 {EraseStream.Name} 完毕！");
+            catch (Exception ex)
+            {
+                Debug.Print($"使用随机值擦除文件 {EraseStream.Name} 遇到异常：{ex.Message}");
+            }
         }
 
         private void StartButton_Click(object sender, EventArgs e)
