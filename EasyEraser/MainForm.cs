@@ -146,12 +146,23 @@ namespace EasyEraser
                 (ChildFilePath) =>
                 {
                     EraseFile(ChildFilePath);
+                    RenameFileAndDelete(ChildFilePath);
                 }
             ));
 
             //对目录串行计算
             foreach (string ChildDirectory in Directory.GetDirectories(TargetDirectory))
                 EraseDirectory(ChildDirectory);
+
+            Debug.Print("删除目录：{0}", TargetDirectory);
+            try
+            {
+                Directory.Delete(TargetDirectory);
+            }
+            catch (Exception ex)
+            {
+                Debug.Print("删除目录遇到异常：{0}", ex.Message);
+            }
         }
 
         /// <summary>
@@ -265,6 +276,24 @@ namespace EasyEraser
         private void MainForm_Shown(object sender, EventArgs e)
         {
             EraseWorker.RunWorkerAsync();
+        }
+
+        /// <summary>
+        /// 混淆文件名并删除
+        /// </summary>
+        /// <param name="FilePath"></param>
+        private void RenameFileAndDelete(string FilePath)
+        {
+            try
+            {
+                string NewFilePath = Path.GetDirectoryName(FilePath) + "\\" + Path.GetFileName(Path.GetRandomFileName());
+                File.Move(FilePath, NewFilePath);
+                File.Delete(NewFilePath);
+            }
+            catch (Exception ex)
+            {
+                Debug.Print("混淆文件名并删除时遇到异常：{0}", ex.Message);
+            }
         }
 
     }
