@@ -6,7 +6,9 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -14,19 +16,117 @@ namespace EasyEraser
 {
     public partial class MainForm : Form
     {
+        [DllImportAttribute("user32.dll")]
+        public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+        [DllImportAttribute("user32.dll")]
+        public static extern bool ReleaseCapture();
+        public const int WM_NCLBUTTONDOWN = 0xA1;
+        public const int HT_CAPTION = 0x2;
+
         /// <summary>
-        /// 测试目录
+        /// 擦除任务完成?
         /// </summary>
-        string TargetDirectory = @"D:\EraseTestDirectory";
+        bool EraseTaskFinished = false;
+        /// <summary>
+        /// 托盘消息通知对象
+        /// </summary>
+        NotifyIcon UnityNotifyIcon = new NotifyIcon();
+        /// <summary>
+        /// 擦除目标路径
+        /// </summary>
+        string TargetDirectory = string.Empty;
+        /// <summary>
+        /// 擦除任务Worker
+        /// </summary>
+        BackgroundWorker EraseWorker = new BackgroundWorker();
 
         public MainForm()
         {
             InitializeComponent();
+
+            if (Environment.GetCommandLineArgs().Length < 2) ExitMe();
+            TargetDirectory = Environment.GetCommandLineArgs()[1];
+            if (string.IsNullOrEmpty(TargetDirectory)) ExitMe();
+            if (!Directory.Exists(TargetDirectory)) ExitMe();
+
+            Ini();
+        }
+
+        private void Ini()
+        {
+            UnityNotifyIcon.Text = "正在擦除痕迹...";
+            UnityNotifyIcon.Icon = this.Icon;
+            UnityNotifyIcon.Visible = true;
+            UnityNotifyIcon.MouseClick += delegate { this.Visible = !this.Visible; };
+            TitleLabel.MouseDown += delegate {
+                ReleaseCapture();
+                SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+            };
+            MinButton.MouseEnter += delegate { MinButton.Image = UnityResource.Min_1; };
+            MinButton.MouseLeave += delegate { MinButton.Image = UnityResource.Min_0; };
+            MinButton.MouseDown += delegate { MinButton.Image = UnityResource.Min_2; };
+            MinButton.MouseUp += delegate { MinButton.Image = UnityResource.Min_1; };
+            MinButton.Click += delegate { HideMe(); };
+            this.FormClosing += delegate (object s, FormClosingEventArgs e)
+            {
+                if (EraseTaskFinished)
+                {
+                    return;
+                }
+                else
+                {
+                    e.Cancel = true;
+                    HideMe();
+                }
+            };
+            this.VisibleChanged += delegate { ProgressTimer.Enabled = this.Visible; };
+
+            EraseWorker.WorkerSupportsCancellation = true;
+            EraseWorker.DoWork += new DoWorkEventHandler((s, e) =>
+            {
+                EraseDirectory(TargetDirectory);
+            });
+            EraseWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler((s, e) =>
+            {
+                Application.DoEvents();
+                IconLabel.Image = UnityResource.Finished;
+                MessageLabel.Text = "痕迹擦除完成！即将退出擦除工具...";
+                Application.DoEvents();
+                UnityNotifyIcon.ShowBalloonTip(3000, "痕迹擦除完成！", "痕迹擦除完成！\n即将退出擦除工具...", ToolTipIcon.Info);
+                Thread.Sleep(3000);
+                ExitMe();
+            });
         }
 
         private void MainForm_Load(object sender, EventArgs e)
         {
+            this.Location = new Point(Screen.PrimaryScreen.Bounds.Width - this.Width - 3, Screen.PrimaryScreen.Bounds.Height - this.Height - 300);
+            this.TopMost = true;
+
+            ProgressTimer.Start();
         }
+
+        private void HideMe()
+        {
+            this.Hide();
+            UnityNotifyIcon.ShowBalloonTip(3000, "正在擦除痕迹...", "擦除程序已经被最小化，\n将在后台继续擦除痕迹...", ToolTipIcon.Info);
+        }
+        private void ExitMe()
+        {
+            UnityNotifyIcon.Visible = false;
+            ProgressTimer.Stop();
+            EraseTaskFinished = true;
+            Environment.Exit(1);
+        }
+
+        int ProgressImageIndex = 0;
+        private void ProgressTimer_Tick(object sender, EventArgs e)
+        {
+            ProgressImageIndex = (ProgressImageIndex + 1) % 12;
+            IconLabel.Image?.Dispose();
+            IconLabel.Image = UnityResource.ResourceManager.GetObject($"ProgressBar_{ProgressImageIndex}") as Bitmap;
+        }
+
 
         /// <summary>
         /// 擦除目录
@@ -34,11 +134,16 @@ namespace EasyEraser
         /// <param name="TargetDirectory">目标目录</param>
         private void EraseDirectory(string TargetDirectory)
         {
+            if (InvokeRequired)
+                this.Invoke(new Action(() => { MessageLabel.Text = $"擦除目录：{TargetDirectory}"; }));
+            else
+                MessageLabel.Text = $"擦除目录：{TargetDirectory}";
+
             Debug.Print("——————————————————————————————\n>>> 擦除目录：{0}", TargetDirectory);
 
             //对文件并行计算
             Parallel.ForEach<string>(Directory.GetFiles(TargetDirectory), new Action<string>(
-                (ChildFilePath) => 
+                (ChildFilePath) =>
                 {
                     EraseFile(ChildFilePath);
                 }
@@ -55,6 +160,10 @@ namespace EasyEraser
         /// <param name="TargetFile">目标文件</param>
         private void EraseFile(string TargetFile)
         {
+            if (InvokeRequired)
+                this.Invoke(new Action(() => { MessageLabel.Text = $"擦除文件：{TargetFile}"; }));
+            else
+                MessageLabel.Text = $"擦除文件：{TargetFile}";
             Debug.Print("擦除文件：{0}", TargetFile);
             if (!File.Exists(TargetFile)) return;
             try
@@ -153,12 +262,10 @@ namespace EasyEraser
             }
         }
 
-        private void StartButton_Click(object sender, EventArgs e)
+        private void MainForm_Shown(object sender, EventArgs e)
         {
-            DateTime StartTime = DateTime.Now;
-            EraseDirectory(TargetDirectory);
-            DateTime FinishTime = DateTime.Now;
-            MessageBox.Show($"擦除文件用时：{(FinishTime - StartTime).TotalSeconds.ToString()} s");
+            EraseWorker.RunWorkerAsync();
         }
+
     }
 }
