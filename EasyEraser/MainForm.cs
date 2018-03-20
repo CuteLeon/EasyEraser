@@ -54,7 +54,7 @@ namespace EasyEraser
 
         private void Ini()
         {
-            UnityNotifyIcon.Text = "正在擦除痕迹...";
+            UnityNotifyIcon.Text = "正在擦除目录和文件...";
             UnityNotifyIcon.Icon = this.Icon;
             UnityNotifyIcon.Visible = true;
             UnityNotifyIcon.MouseClick += delegate { this.Visible = !this.Visible; };
@@ -92,7 +92,7 @@ namespace EasyEraser
                 IconLabel.Image = UnityResource.Finished;
                 MessageLabel.Text = "痕迹擦除完成！即将退出擦除工具...";
                 Application.DoEvents();
-                UnityNotifyIcon.ShowBalloonTip(3000, "痕迹擦除完成！", "痕迹擦除完成！\n即将退出擦除工具...", ToolTipIcon.Info);
+                UnityNotifyIcon.ShowBalloonTip(3000, "痕迹擦除完成！", "目录和文件擦除完成！\n即将退出擦除工具...", ToolTipIcon.Info);
                 Thread.Sleep(3000);
                 ExitMe();
             });
@@ -109,7 +109,7 @@ namespace EasyEraser
         private void HideMe()
         {
             this.Hide();
-            UnityNotifyIcon.ShowBalloonTip(3000, "正在擦除痕迹...", "擦除程序已经被最小化，\n将在后台继续擦除痕迹...", ToolTipIcon.Info);
+            UnityNotifyIcon.ShowBalloonTip(3000, "正在擦除目录和文件...", "擦除程序已经被最小化，\n将在后台继续擦除目录和文件...", ToolTipIcon.Info);
         }
         private void ExitMe()
         {

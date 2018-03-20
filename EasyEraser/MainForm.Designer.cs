@@ -76,7 +76,7 @@
             this.TitleLabel.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.TitleLabel.Size = new System.Drawing.Size(268, 30);
             this.TitleLabel.TabIndex = 3;
-            this.TitleLabel.Text = "正在擦除痕迹...";
+            this.TitleLabel.Text = "正在擦除目录和文件...";
             this.TitleLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // MinButton
@@ -119,7 +119,7 @@
             this.MessageLabel.Padding = new System.Windows.Forms.Padding(5);
             this.MessageLabel.Size = new System.Drawing.Size(210, 90);
             this.MessageLabel.TabIndex = 4;
-            this.MessageLabel.Text = "正在擦除痕迹...";
+            this.MessageLabel.Text = "正在擦除目录和文件...";
             this.MessageLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // ProgressTimer
